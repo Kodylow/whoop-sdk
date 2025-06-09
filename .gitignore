@@ -1,5 +1,5 @@
 # Dependencies
-node_modules/
+**/node_modules/
 .pnp/
 .pnp.js
 yarn.lock
@@ -15,8 +15,9 @@ lib/
 # Testing
 coverage/
 .nyc_output/
-test/.token-cache
-test/token-cache.json
+**/token-cache
+**/token-cache.json
+**/.token-cache
 
 # Environment
 .env
