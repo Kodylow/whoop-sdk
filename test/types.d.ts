@@ -4,17 +4,6 @@
  */
 
 declare global {
-  // Jest globals
-  var jest: typeof import('jest');
-  var describe: typeof import('@jest/globals').describe;
-  var it: typeof import('@jest/globals').it;
-  var test: typeof import('@jest/globals').test;
-  var expect: typeof import('@jest/globals').expect;
-  var beforeAll: typeof import('@jest/globals').beforeAll;
-  var beforeEach: typeof import('@jest/globals').beforeEach;
-  var afterAll: typeof import('@jest/globals').afterAll;
-  var afterEach: typeof import('@jest/globals').afterEach;
-
   // Test data globals
   var testData: {
     validTokens: {
@@ -40,14 +29,6 @@ declare global {
   // Test helpers
   var createMockResponse: (data: any, status?: number, headers?: Record<string, string>) => any;
   var createMockErrorResponse: (status: number, message: string) => any;
-
-  // Performance mock
-  var performance: {
-    now: jest.MockedFunction<() => number>;
-  };
-
-  // Fetch mock
-  var fetch: jest.MockedFunction<typeof fetch>;
 }
 
 export {}; 

@@ -60,7 +60,7 @@ export class WorkoutsEndpoint extends BaseEndpoint {
       
       const response = await this.list(listParams, options);
       
-      for (const workout of response.records) {
+      for (const workout of response.data) {
         yield workout;
       }
       

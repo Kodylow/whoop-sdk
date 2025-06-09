@@ -3,8 +3,9 @@
  * Comprehensive test script demonstrating OAuth flow and data retrieval
  */
 
-import { WhoopSDK, createOAuthClient, validateAuthorizationCallback, formatDuration, metersToFeet, kilogramsToPounds } from '../src';
+import { WhoopSDK, createOAuthClient, validateAuthorizationCallback } from '../src';
 import type { OAuthTokens } from '../src';
+import { formatDuration, kilogramsToPounds, metersToFeet } from '../src/utils';
 
 // Configuration - Replace with your actual values
 const CLIENT_ID = process.env.WHOOP_CLIENT_ID || 'your-client-id';

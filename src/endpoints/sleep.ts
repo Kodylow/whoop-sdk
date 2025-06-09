@@ -60,7 +60,7 @@ export class SleepEndpoint extends BaseEndpoint {
       
       const response = await this.list(listParams, options);
       
-      for (const sleep of response.records) {
+      for (const sleep of response.data) {
         yield sleep;
       }
       

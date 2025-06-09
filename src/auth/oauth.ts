@@ -3,8 +3,8 @@
  * Comprehensive OAuth2 flow implementation with token management
  */
 
+import { ErrorFactory, WhoopAuthError, WhoopOAuthError } from '../errors';
 import type { OAuthConfig, OAuthTokens, WhoopScope } from '../types';
-import { WhoopOAuthError, WhoopAuthError, ErrorFactory } from '../errors';
 import { buildUrl, DEFAULT_BASE_URL } from '../utils';
 
 /**

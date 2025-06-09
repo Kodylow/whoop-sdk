@@ -141,4 +141,52 @@ export interface Workout {
   score?: WorkoutScore;
 }
 
-export interface PaginatedWorkoutResponse extends PaginatedResponse<Workout> {} 
+export interface PaginatedWorkoutResponse extends PaginatedResponse<Workout> {}
+
+// Convenience Types for Common Use Cases
+export interface CurrentRecoveryResult {
+  /** The current cycle data */
+  cycle: Cycle;
+  /** Recovery data if available */
+  recovery: Recovery | null;
+  /** Helper flags for easy checking */
+  status: {
+    /** Whether the user is still calibrating (new users) */
+    isCalibrating: boolean;
+    /** Whether recovery data is available */
+    hasRecovery: boolean;
+    /** Whether the recovery score is fully calculated */
+    isScored: boolean;
+    /** Whether we're still waiting for the score */
+    isPending: boolean;
+    /** Whether the cycle cannot be scored */
+    isUnscorable: boolean;
+  };
+}
+
+export interface UserSummary {
+  profile: UserBasicProfile;
+  bodyMeasurement?: UserBodyMeasurement;
+  /** Latest cycle if available */
+  currentCycle?: Cycle;
+  /** Current recovery if available */
+  currentRecovery?: Recovery;
+}
+
+// Date range helpers
+export interface DateRange {
+  start: string; // ISO 8601 format
+  end: string;   // ISO 8601 format
+}
+
+// Common query params with better defaults
+export interface WhoopQueryParams {
+  /** Limit number of results (1-50, default: 25) */
+  limit?: number;
+  /** Start date in ISO 8601 format */
+  start?: string;
+  /** End date in ISO 8601 format */
+  end?: string;
+  /** Next page token for pagination */
+  nextToken?: string;
+} 
