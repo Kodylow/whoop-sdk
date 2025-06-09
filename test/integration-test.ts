@@ -10,7 +10,7 @@ import { formatDuration, kilogramsToPounds, metersToFeet } from '../src/utils';
 // Configuration - Replace with your actual values
 const CLIENT_ID = process.env.WHOOP_CLIENT_ID || 'your-client-id';
 const CLIENT_SECRET = process.env.WHOOP_CLIENT_SECRET || 'your-client-secret';
-const REDIRECT_URI = process.env.WHOOP_REDIRECT_URI || 'http://localhost:3000/callback';
+const REDIRECT_URI = process.env.WHOOP_REDIRECT_URI || 'http://localhost:5000/api/whoop/callback';
 
 /**
  * Simulate OAuth flow

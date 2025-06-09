@@ -32,7 +32,8 @@ interface TestResults {
 class WhoopAPITestRunner {
   private sdk: WhoopSDK;
   private server: Server | undefined;
-  private authCode?: string;
+  private authCode: string | undefined;
+  private expectedState: string | undefined;
   private results: TestResults;
 
   // Configuration
@@ -49,10 +50,10 @@ class WhoopAPITestRunner {
     // Auto-detect redirect URI
     const defaultRedirectUri = process.env.REPLIT_DEV_DOMAIN 
       ? `https://${process.env.REPLIT_DEV_DOMAIN}/api/whoop/callback`
-      : 'http://localhost:8080/api/whoop/callback';
+      : 'http://localhost:5000/api/whoop/callback';
     
     this.redirectUri = process.env.WHOOP_REDIRECT_URI || defaultRedirectUri;
-    this.port = parseInt(process.env.PORT || '8080');
+    this.port = parseInt(process.env.PORT || '5000');
 
     // Initialize test results
     this.results = {
@@ -145,7 +146,7 @@ class WhoopAPITestRunner {
 
       // OAuth callback endpoint
       app.get('/api/whoop/callback', (req, res) => {
-        const { code, error, error_description } = req.query;
+        const { code, state, error, error_description } = req.query;
 
         if (error) {
           const errorMsg = `Authorization failed: ${error} - ${error_description || 'Unknown error'}`;
@@ -157,6 +158,22 @@ class WhoopAPITestRunner {
                 <p><strong>Error:</strong> ${error}</p>
                 <p><strong>Description:</strong> ${error_description || 'Unknown error'}</p>
                 <p>Please check your WHOOP app configuration and try again.</p>
+              </body>
+            </html>
+          `);
+          return;
+        }
+
+        // Validate state parameter
+        if (this.expectedState && state !== this.expectedState) {
+          const errorMsg = 'State parameter mismatch - possible CSRF attack';
+          console.error(`❌ ${errorMsg}`);
+          res.status(400).send(`
+            <html>
+              <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
+                <h1 style="color: red;">❌ Security Error</h1>
+                <p><strong>Error:</strong> State parameter mismatch</p>
+                <p>This could indicate a CSRF attack. Please try again.</p>
               </body>
             </html>
           `);
@@ -214,8 +231,11 @@ class WhoopAPITestRunner {
       // Start callback server
       await this.startCallbackServer();
 
-      // Generate authorization URL
+      // Generate authorization URL with state parameter
+      const state = 'whoop-test-' + Math.random().toString(36).substring(2, 15);
+      this.expectedState = state; // Store expected state for validation
       const authUrl = this.sdk.auth!.getAuthorizationUrl({
+        state: state,
         scopes: [
           'offline',
           'read:profile',
@@ -260,6 +280,8 @@ class WhoopAPITestRunner {
       throw error;
     } finally {
       this.stopCallbackServer();
+      this.authCode = undefined;
+      this.expectedState = undefined;
     }
   }
 

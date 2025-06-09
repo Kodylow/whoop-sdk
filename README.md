@@ -69,7 +69,7 @@ Run the integration test:
 ```bash
 export WHOOP_CLIENT_ID="your-client-id"
 export WHOOP_CLIENT_SECRET="your-client-secret"
-export WHOOP_REDIRECT_URI="http://localhost:3000/callback"
+export WHOOP_REDIRECT_URI="http://localhost:5000/api/whoop/callback"
 
 npm run test
 ```
