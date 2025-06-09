@@ -1,0 +1,84 @@
+{
+  "name": "@whoop/sdk",
+  "version": "1.0.0",
+  "description": "Official TypeScript SDK for the WHOOP API",
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "npm run build && node test/run-test.js",
+    "test:unit": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:integration": "ts-node test/test-run.ts",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "whoop",
+    "api",
+    "sdk",
+    "typescript",
+    "fitness",
+    "health",
+    "recovery",
+    "sleep",
+    "strain"
+  ],
+  "author": "WHOOP",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.0",
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.19.0",
+    "@typescript-eslint/eslint-plugin": "^6.12.0",
+    "@typescript-eslint/parser": "^6.12.0",
+    "dotenv": "^16.3.0",
+    "eslint": "^8.54.0",
+    "express": "^4.18.0",
+    "jest": "^29.5.0",
+    "nock": "^13.3.0",
+    "open": "^9.1.0",
+    "rimraf": "^5.0.5",
+    "ts-jest": "^29.1.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/whoop/sdk-typescript.git"
+  },
+  "bugs": {
+    "url": "https://github.com/whoop/sdk-typescript/issues"
+  },
+  "homepage": "https://github.com/whoop/sdk-typescript#readme",
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "src/**/*.ts",
+      "!src/**/*.d.ts",
+      "!src/**/index.ts"
+    ],
+    "testMatch": [
+      "<rootDir>/test/**/*.test.ts"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/test/setup.ts"
+    ]
+  }
+}
