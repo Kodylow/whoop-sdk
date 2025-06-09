@@ -12,7 +12,13 @@ export const DEFAULT_BASE_URL = 'https://api.prod.whoop.com/developer';
  * Build URL with query parameters
  */
 export function buildUrl(baseUrl: string, path: string, params?: Record<string, any>): string {
-  const url = new URL(path, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
+  // Ensure baseUrl doesn't end with slash and path doesn't start with slash
+  const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+  const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+  
+  // Construct the full URL
+  const fullUrl = `${cleanBaseUrl}/${cleanPath}`;
+  const url = new URL(fullUrl);
   
   if (params) {
     Object.entries(params).forEach(([key, value]) => {

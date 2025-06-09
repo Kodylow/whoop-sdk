@@ -48,7 +48,7 @@ export class RecoveryEndpoint extends BaseEndpoint {
       
       const response = await this.list(listParams, options);
       
-      for (const recovery of response.data) {
+      for (const recovery of response.records) {
         yield recovery;
       }
       

@@ -34,7 +34,7 @@ export class WorkoutsEndpoint extends BaseEndpoint {
   /**
    * Get a specific workout by ID
    */
-  async get(
+  async getById(
     workoutId: number | string,
     options?: RequestOptions
   ): Promise<Workout> {
@@ -60,7 +60,7 @@ export class WorkoutsEndpoint extends BaseEndpoint {
       
       const response = await this.list(listParams, options);
       
-      for (const workout of response.data) {
+      for (const workout of response.records) {
         yield workout;
       }
       

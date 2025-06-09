@@ -35,7 +35,7 @@ global.testData = {
 
   // Mock cycle data
   cycleData: {
-    data: [
+    records: [
       {
         id: 1001,
         user_id: 12345,
@@ -57,7 +57,7 @@ global.testData = {
 
   // Mock recovery data
   recoveryData: {
-    data: [
+    records: [
       {
         cycle_id: 1001,
         sleep_id: 2001,
@@ -78,7 +78,7 @@ global.testData = {
 
   // Mock sleep data
   sleepData: {
-    data: [
+    records: [
       {
         id: 2001,
         user_id: 12345,
@@ -118,7 +118,7 @@ global.testData = {
 
   // Mock workout data
   workoutData: {
-    data: [
+    records: [
       {
         id: 3001,
         user_id: 12345,

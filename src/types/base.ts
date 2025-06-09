@@ -16,7 +16,7 @@ export interface PaginationParams {
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
+  records: T[];
   next_token?: string;
 }
 

@@ -12,13 +12,21 @@
  */
 
 import { WhoopSDK } from '../src/index';
+import type { OAuthTokens } from '../src/types';
 import express from 'express';
 import open from 'open';
 import { config } from 'dotenv';
 import { Server } from 'http';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // Load environment variables
 config();
+
+interface CachedTokens extends OAuthTokens {
+  expires_at: number; // Unix timestamp when the token expires
+  cached_at: number;   // Unix timestamp when the token was cached
+}
 
 interface TestResults {
   totalTests: number;
@@ -41,6 +49,7 @@ class WhoopAPITestRunner {
   private readonly clientSecret: string;
   private readonly redirectUri: string;
   private readonly port: number;
+  private readonly tokenCacheFile: string;
 
   constructor() {
     // Get configuration from environment
@@ -54,6 +63,7 @@ class WhoopAPITestRunner {
     
     this.redirectUri = process.env.WHOOP_REDIRECT_URI || defaultRedirectUri;
     this.port = parseInt(process.env.PORT || '5000');
+    this.tokenCacheFile = path.join(__dirname, '.token-cache');
 
     // Initialize test results
     this.results = {
@@ -98,8 +108,73 @@ class WhoopAPITestRunner {
         },
         slowRequestThreshold: 2000,
         profiling: true
+      },
+      onTokenRefresh: (newTokens) => {
+        // Save refreshed tokens to cache
+        this.saveTokensToCache(newTokens);
+        console.log('🔄 Tokens refreshed and cached automatically');
       }
     });
+  }
+
+  private loadTokensFromCache(): CachedTokens | null {
+    try {
+      if (!fs.existsSync(this.tokenCacheFile)) {
+        return null;
+      }
+
+      const data = fs.readFileSync(this.tokenCacheFile, 'utf-8');
+      const cachedTokens: CachedTokens = JSON.parse(data);
+
+      // Check if tokens are expired (with 5 minute buffer)
+      const now = Date.now();
+      const bufferMs = 5 * 60 * 1000; // 5 minutes buffer
+      
+      if (cachedTokens.expires_at && cachedTokens.expires_at <= (now + bufferMs)) {
+        console.log('⚠️ Cached tokens are expired, will need to re-authenticate');
+        return null;
+      }
+
+      // Check if tokens are too old (more than 7 days)
+      const maxAge = 7 * 24 * 60 * 60 * 1000; // 7 days
+      if ((now - cachedTokens.cached_at) > maxAge) {
+        console.log('⚠️ Cached tokens are too old, will need to re-authenticate');
+        return null;
+      }
+
+      console.log('✅ Found valid cached tokens');
+      return cachedTokens;
+    } catch (error) {
+      console.warn('⚠️ Failed to load cached tokens:', (error as Error).message);
+      return null;
+    }
+  }
+
+  private saveTokensToCache(tokens: OAuthTokens): void {
+    try {
+      const now = Date.now();
+      const cachedTokens: CachedTokens = {
+        ...tokens,
+        expires_at: tokens.expires_in ? (now + tokens.expires_in * 1000) : 0,
+        cached_at: now
+      };
+
+      fs.writeFileSync(this.tokenCacheFile, JSON.stringify(cachedTokens, null, 2));
+      console.log('💾 Tokens cached successfully');
+    } catch (error) {
+      console.warn('⚠️ Failed to cache tokens:', (error as Error).message);
+    }
+  }
+
+  public clearTokenCache(): void {
+    try {
+      if (fs.existsSync(this.tokenCacheFile)) {
+        fs.unlinkSync(this.tokenCacheFile);
+        console.log('🗑️ Token cache cleared');
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to clear token cache:', (error as Error).message);
+    }
   }
 
   private validateConfig(): void {
@@ -219,15 +294,40 @@ class WhoopAPITestRunner {
     console.log('\n' + '='.repeat(60));
     console.log('🔐 WHOOP API Authentication');
     console.log('='.repeat(60));
-    console.log('🔧 IMPORTANT: Make sure your WHOOP app is configured with this redirect URI:');
-    console.log(`   ${this.redirectUri}`);
-    console.log('\n📋 To configure your WHOOP app:');
-    console.log('1. Go to https://developer.whoop.com');
-    console.log('2. Select your app');
-    console.log('3. Add this redirect URI to your app settings');
-    console.log('='.repeat(60));
 
     try {
+      // Try to load cached tokens first
+      const cachedTokens = this.loadTokensFromCache();
+      
+      if (cachedTokens) {
+        console.log('🔄 Using cached authentication tokens...');
+        
+        // Test if the cached tokens work by setting them and making a quick API call
+        try {
+          this.sdk.setTokens(cachedTokens);
+          
+          // Quick test to see if tokens are valid
+          await this.sdk.user.getProfile();
+          
+          console.log('✅ Cached tokens are valid and working!');
+          console.log(`📊 Token expires in: ${Math.floor((cachedTokens.expires_at! - Date.now()) / 1000)} seconds`);
+          return true;
+        } catch (tokenError) {
+          console.log('⚠️ Cached tokens are invalid, clearing cache and re-authenticating...');
+          this.clearTokenCache();
+          // Fall through to OAuth flow
+        }
+      }
+
+      // No valid cached tokens, proceed with OAuth flow
+      console.log('🔧 IMPORTANT: Make sure your WHOOP app is configured with this redirect URI:');
+      console.log(`   ${this.redirectUri}`);
+      console.log('\n📋 To configure your WHOOP app:');
+      console.log('1. Go to https://developer.whoop.com');
+      console.log('2. Select your app');
+      console.log('3. Add this redirect URI to your app settings');
+      console.log('='.repeat(60));
+
       // Start callback server
       await this.startCallbackServer();
 
@@ -270,8 +370,12 @@ class WhoopAPITestRunner {
       // Exchange code for tokens
       const tokens = await this.sdk.auth!.exchangeCodeForTokens(this.authCode);
       
+      // Save tokens to cache
+      this.saveTokensToCache(tokens);
+      
       console.log('🎉 Authentication successful!');
       console.log(`📊 Token expires in: ${tokens.expires_in} seconds`);
+      console.log('💾 Tokens saved to cache for future use');
       
       return true;
 
@@ -356,9 +460,9 @@ class WhoopAPITestRunner {
     
     try {
       const cycles = await this.sdk.cycles.list({ limit: 3 });
-      this.logTest('Cycles', true, `Found ${cycles.data.length} recent cycles`);
+      this.logTest('Cycles', true, `Found ${cycles.records.length} recent cycles`);
       
-      cycles.data.slice(0, 2).forEach((cycle, index) => {
+      cycles.records.slice(0, 2).forEach((cycle, index) => {
         const strain = cycle.score?.strain || 'N/A';
         console.log(`   🔄 Cycle ${index + 1}: ${cycle.start}, Strain: ${strain}`);
       });
@@ -372,9 +476,9 @@ class WhoopAPITestRunner {
     
     try {
       const sleep = await this.sdk.sleep.list({ limit: 2 });
-      this.logTest('Sleep', true, `Found ${sleep.data.length} recent sleep records`);
+      this.logTest('Sleep', true, `Found ${sleep.records.length} recent sleep records`);
       
-      sleep.data.forEach((sleepRecord, index) => {
+      sleep.records.forEach((sleepRecord, index) => {
         const efficiency = sleepRecord.score?.sleep_efficiency_percentage || 'N/A';
         const performance = sleepRecord.score?.sleep_performance_percentage || 'N/A';
         console.log(`   😴 Sleep ${index + 1}: ${sleepRecord.start}`);
@@ -390,9 +494,9 @@ class WhoopAPITestRunner {
     
     try {
       const recovery = await this.sdk.recovery.list({ limit: 2 });
-      this.logTest('Recovery', true, `Found ${recovery.data.length} recent recovery records`);
+      this.logTest('Recovery', true, `Found ${recovery.records.length} recent recovery records`);
       
-      recovery.data.forEach((recoveryRecord, index) => {
+      recovery.records.forEach((recoveryRecord, index) => {
         const score = recoveryRecord.score?.recovery_score || 'N/A';
         const hrv = recoveryRecord.score?.hrv_rmssd_milli || 'N/A';
         const rhr = recoveryRecord.score?.resting_heart_rate || 'N/A';
@@ -409,9 +513,9 @@ class WhoopAPITestRunner {
     
     try {
       const workouts = await this.sdk.workouts.list({ limit: 2 });
-      this.logTest('Workouts', true, `Found ${workouts.data.length} recent workouts`);
+      this.logTest('Workouts', true, `Found ${workouts.records.length} recent workouts`);
       
-      workouts.data.forEach((workout, index) => {
+      workouts.records.forEach((workout, index) => {
         const strain = workout.score?.strain || 'N/A';
         const avgHr = workout.score?.average_heart_rate || 'N/A';
         const kilojoules = workout.score?.kilojoule || 'N/A';
@@ -530,6 +634,40 @@ class WhoopAPITestRunner {
 // Main execution
 async function main(): Promise<number> {
   try {
+    // Check for command line arguments
+    const args = process.argv.slice(2);
+    
+    if (args.includes('--clear-cache') || args.includes('-c')) {
+      console.log('🗑️ Clearing token cache...');
+      const testRunner = new WhoopAPITestRunner();
+      testRunner.clearTokenCache();
+      console.log('✅ Token cache cleared successfully');
+      console.log('💡 Next run will require fresh authentication');
+      return 0;
+    }
+
+    if (args.includes('--help') || args.includes('-h')) {
+      console.log('🩺 WHOOP SDK Test Runner');
+      console.log('');
+      console.log('Usage: npm run test [options]');
+      console.log('       ts-node test/test-run.ts [options]');
+      console.log('');
+      console.log('Options:');
+      console.log('  --clear-cache, -c    Clear cached authentication tokens');
+      console.log('  --help, -h           Show this help message');
+      console.log('');
+      console.log('Environment Variables:');
+      console.log('  WHOOP_CLIENT_ID      Your WHOOP app client ID (required)');
+      console.log('  WHOOP_CLIENT_SECRET  Your WHOOP app client secret (required)');
+      console.log('  WHOOP_REDIRECT_URI   OAuth redirect URI (optional)');
+      console.log('  PORT                 Callback server port (default: 5000)');
+      console.log('');
+      console.log('Examples:');
+      console.log('  npm run test                    # Run tests with cached tokens if available');
+      console.log('  npm run test -- --clear-cache   # Clear cache and run fresh OAuth flow');
+      return 0;
+    }
+
     const testRunner = new WhoopAPITestRunner();
     return await testRunner.run();
   } catch (error) {

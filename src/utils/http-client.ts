@@ -138,7 +138,7 @@ export class OptimizedHttpClient {
 
       const response = await this.get<PaginatedResponse<T>>(path, requestOptions);
       
-      for (const item of response.data) {
+      for (const item of response.records) {
         yield item;
       }
 

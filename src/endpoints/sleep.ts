@@ -34,7 +34,7 @@ export class SleepEndpoint extends BaseEndpoint {
   /**
    * Get a specific sleep by ID
    */
-  async get(
+  async getById(
     sleepId: number | string,
     options?: RequestOptions
   ): Promise<Sleep> {
@@ -60,7 +60,7 @@ export class SleepEndpoint extends BaseEndpoint {
       
       const response = await this.list(listParams, options);
       
-      for (const sleep of response.data) {
+      for (const sleep of response.records) {
         yield sleep;
       }
       

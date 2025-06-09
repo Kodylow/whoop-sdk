@@ -3,7 +3,7 @@
  * End-to-end tests for the WHOOP SDK
  */
 
-import { WhoopSDK } from '../../src/index';
+import { Cycle, WhoopSDK } from '../../src/index';
 import nock from 'nock';
 
 describe('WhoopSDK Integration Tests', () => {
@@ -57,7 +57,7 @@ describe('WhoopSDK Integration Tests', () => {
 
   describe('Authentication Flow', () => {
     it('should generate valid authorization URL', () => {
-      const authUrl = sdk.getAuthorizationUrl(['read:profile', 'read:cycles']);
+      const authUrl = sdk.auth?.getAuthorizationUrl({ scopes: ['read:profile', 'read:cycles'] });
       
       expect(authUrl).toContain('https://api.prod.whoop.com/oauth/oauth2/auth');
       expect(authUrl).toContain('client_id=test-client-id');
@@ -76,10 +76,10 @@ describe('WhoopSDK Integration Tests', () => {
           scope: 'read:profile offline'
         });
 
-      const tokens = await sdk.exchangeCodeForTokens('test-auth-code');
+      const tokens = await sdk.auth?.exchangeCodeForTokens('test-auth-code');
       
-      expect(tokens.access_token).toBe('new-access-token');
-      expect(tokens.refresh_token).toBe('new-refresh-token');
+      expect(tokens?.access_token).toBe('new-access-token');
+      expect(tokens?.refresh_token).toBe('new-refresh-token');
     });
 
     it('should refresh access token', async () => {
@@ -93,9 +93,9 @@ describe('WhoopSDK Integration Tests', () => {
           scope: 'read:profile offline'
         });
 
-      const tokens = await sdk.refreshAccessToken();
+      const tokens = await sdk.auth?.refreshAccessToken();
       
-      expect(tokens.access_token).toBe('refreshed-access-token');
+      expect(tokens?.access_token).toBe('refreshed-access-token');
     });
   });
 
@@ -117,10 +117,10 @@ describe('WhoopSDK Integration Tests', () => {
         .get('/v1/user/measurement/body')
         .reply(200, global.testData.bodyMeasurements);
 
-      const measurements = await sdk.user.getBodyMeasurements();
+      const measurements = await sdk.user.getBodyMeasurement();
       
       expect(measurements.height_meter).toBe(1.75);
-      expect(measurements.weight_kilogram).toBe(70.5);
+      expect(measurements.weight_kilogram).toBe(70.5); 
     });
 
     it('should handle user profile errors gracefully', async () => {
@@ -139,35 +139,35 @@ describe('WhoopSDK Integration Tests', () => {
         .query({ limit: 5, start: '2024-01-01T00:00:00.000Z' })
         .reply(200, global.testData.cycleData);
 
-      const cycles = await sdk.cycles.getCycles({
+      const cycles = await sdk.cycles.list({
         limit: 5,
         start: '2024-01-01T00:00:00.000Z'
       });
 
-      expect(cycles.data).toHaveLength(1);
-      expect(cycles.data[0].id).toBe(1001);
-      expect(cycles.data[0].score.strain).toBe(15.2);
+      expect(cycles.records).toHaveLength(1);
+      expect(cycles.records[0].id).toBe(1001);
+      expect(cycles.records[0].score?.strain).toBe(15.2);
     });
 
     it('should fetch single cycle by ID', async () => {
       nock(baseUrl)
         .get('/v1/cycle/1001')
-        .reply(200, global.testData.cycleData.data[0]);
+        .reply(200, global.testData.cycleData.records[0]);
 
-      const cycle = await sdk.cycles.getCycle(1001);
+      const cycle = await sdk.cycles.getById(1001);
       
       expect(cycle.id).toBe(1001);
-      expect(cycle.score.strain).toBe(15.2);
+      expect(cycle.score?.strain).toBe(15.2);
     });
 
     it('should handle paginated cycles', async () => {
       const page1 = {
-        data: [global.testData.cycleData.data[0]],
+        records: [global.testData.cycleData.records[0]],
         next_token: 'page2-token'
       };
       
       const page2 = {
-        data: [{ ...global.testData.cycleData.data[0], id: 1002 }],
+        records: [{ ...global.testData.cycleData.records[0], id: 1002 }],
         next_token: null
       };
 
@@ -181,8 +181,8 @@ describe('WhoopSDK Integration Tests', () => {
         .query({ limit: 1, nextToken: 'page2-token' })
         .reply(200, page2);
 
-      const allCycles = [];
-      for await (const cycle of sdk.cycles.getCyclesIterable({ limit: 1 })) {
+      const allCycles: Cycle[] = [];
+      for await (const cycle of sdk.cycles.iterate({ limit: 1 })) {
         allCycles.push(cycle);
       }
 
@@ -198,21 +198,21 @@ describe('WhoopSDK Integration Tests', () => {
         .get('/v1/recovery')
         .reply(200, global.testData.recoveryData);
 
-      const recovery = await sdk.recovery.getRecovery();
+      const recovery = await sdk.recovery.list();
       
-      expect(recovery.data).toHaveLength(1);
-      expect(recovery.data[0].score.recovery_score).toBe(85);
+      expect(recovery.records).toHaveLength(1);
+      expect(recovery.records[0].score?.recovery_score).toBe(85);
     });
 
     it('should fetch recovery by cycle ID', async () => {
       nock(baseUrl)
-        .get('/v1/recovery/1001')
-        .reply(200, global.testData.recoveryData.data[0]);
+        .get('/v1/cycle/1001/recovery')
+        .reply(200, global.testData.recoveryData.records[0]);
 
-      const recovery = await sdk.recovery.getRecoveryForCycle(1001);
+      const recovery = await sdk.cycles.getRecovery(1001);
       
       expect(recovery.cycle_id).toBe(1001);
-      expect(recovery.score.recovery_score).toBe(85);
+      expect(recovery.score?.recovery_score).toBe(85);
     });
   });
 
@@ -222,21 +222,21 @@ describe('WhoopSDK Integration Tests', () => {
         .get('/v1/activity/sleep')
         .reply(200, global.testData.sleepData);
 
-      const sleep = await sdk.sleep.getSleep();
+      const sleep = await sdk.sleep.list();
       
-      expect(sleep.data).toHaveLength(1);
-      expect(sleep.data[0].score.sleep_performance_percentage).toBe(88);
+      expect(sleep.records).toHaveLength(1);
+      expect(sleep.records[0].score?.sleep_performance_percentage).toBe(88);
     });
 
     it('should fetch sleep by ID', async () => {
       nock(baseUrl)
         .get('/v1/activity/sleep/2001')
-        .reply(200, global.testData.sleepData.data[0]);
+        .reply(200, global.testData.sleepData.records[0]);
 
-      const sleep = await sdk.sleep.getSleepById(2001);
+      const sleep = await sdk.sleep.getById(2001);
       
       expect(sleep.id).toBe(2001);
-      expect(sleep.score.sleep_efficiency_percentage).toBe(94);
+      expect(sleep.score?.sleep_efficiency_percentage).toBe(94);
     });
   });
 
@@ -246,21 +246,21 @@ describe('WhoopSDK Integration Tests', () => {
         .get('/v1/activity/workout')
         .reply(200, global.testData.workoutData);
 
-      const workouts = await sdk.workouts.getWorkouts();
+      const workouts = await sdk.workouts.list();
       
-      expect(workouts.data).toHaveLength(1);
-      expect(workouts.data[0].score.strain).toBe(12.8);
+      expect(workouts.records).toHaveLength(1);
+      expect(workouts.records[0].score?.strain).toBe(12.8);
     });
 
     it('should fetch workout by ID', async () => {
       nock(baseUrl)
         .get('/v1/activity/workout/3001')
-        .reply(200, global.testData.workoutData.data[0]);
+        .reply(200, global.testData.workoutData.records[0]);
 
-      const workout = await sdk.workouts.getWorkout(3001);
+      const workout = await sdk.workouts.getById(3001);
       
       expect(workout.id).toBe(3001);
-      expect(workout.score.average_heart_rate).toBe(145);
+      expect(workout.score?.average_heart_rate).toBe(145);
     });
   });
 
@@ -309,7 +309,7 @@ describe('WhoopSDK Integration Tests', () => {
 
       await sdk.user.getProfile();
       
-      const stats = sdk.getPerformanceStats();
+      const stats = sdk.http.getPerformanceStats();
       
       expect(stats.cache).toBeDefined();
       expect(stats.deduplication).toBeDefined();
@@ -411,12 +411,12 @@ describe('WhoopSDK Integration Tests', () => {
 
       await sdk.user.getProfile();
       
-      const statsBefore = sdk.getPerformanceStats();
+      const statsBefore = sdk.http.getPerformanceStats();
       expect(statsBefore.cache.size).toBeGreaterThan(0);
       
-      sdk.reset();
+      sdk.http.reset();
       
-      const statsAfter = sdk.getPerformanceStats();
+      const statsAfter = sdk.http.getPerformanceStats();
       expect(statsAfter.cache.size).toBe(0);
     });
   });

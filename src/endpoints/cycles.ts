@@ -37,7 +37,7 @@ export class CyclesEndpoint extends BaseEndpoint {
   /**
    * Get a specific cycle by ID
    */
-  async get(
+  async getById(
     cycleId: number | string,
     options?: RequestOptions
   ): Promise<Cycle> {
@@ -92,11 +92,11 @@ export class CyclesEndpoint extends BaseEndpoint {
     // Step 1: Get the user's current (latest) cycle
     const cyclesResponse = await this.list({ limit: 1 }, options);
     
-    if (!cyclesResponse.data || cyclesResponse.data.length === 0) {
+    if (!cyclesResponse.records || cyclesResponse.records.length === 0) {
       throw new Error('No cycles found for user. This may be a new user who hasn\'t started tracking yet.');
     }
 
-    const currentCycle = cyclesResponse.data[0]!; // Safe because we checked length above
+    const currentCycle = cyclesResponse.records[0]!; // Safe because we checked length above
 
     // Step 2: Get recovery for the current cycle (if it exists)
     const recovery = await this.getRecoverySafe(currentCycle.id, options);
@@ -149,7 +149,7 @@ export class CyclesEndpoint extends BaseEndpoint {
     
     // Fetch recovery data for all cycles in parallel
     const cyclesWithRecovery = await Promise.all(
-      cyclesResponse.data.map(async (cycle: Cycle) => {
+      cyclesResponse.records.map(async (cycle: Cycle) => {
         const recovery = await this.getRecoverySafe(cycle.id, options);
         return { cycle, recovery };
       })
@@ -189,7 +189,7 @@ export class CyclesEndpoint extends BaseEndpoint {
       
       const response = await this.list(listParams, options);
       
-      for (const cycle of response.data) {
+      for (const cycle of response.records) {
         yield cycle;
       }
       
