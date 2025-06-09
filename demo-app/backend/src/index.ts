@@ -4,9 +4,10 @@ import session from 'express-session';
 import cookieParser from 'cookie-parser';
 import { config } from 'dotenv';
 import { WhoopSDK, getRecommendedScopes } from '@whoop/sdk';
+import path from 'path';
 
-// Load environment variables
-config();
+// Load environment variables from parent directory
+config({ path: path.resolve(__dirname, '../../../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 3001;

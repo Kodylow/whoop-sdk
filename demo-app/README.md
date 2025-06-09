@@ -62,18 +62,20 @@ This will install dependencies for both frontend and backend.
 
 3. **Configure environment variables:**
 
-Copy the example environment file and fill in your Whoop credentials:
+The demo app uses the `.env` file from the parent directory (whoop-sdk root). Create or edit the `.env` file in the whoop-sdk directory:
 
 ```bash
-cd backend
-cp env.example .env
+cd .. # Go back to whoop-sdk root directory
 ```
 
-Edit `.env` and add your Whoop credentials:
+Create or edit `.env` and add your Whoop credentials along with demo app configuration:
 ```env
+# Whoop API Credentials
 WHOOP_CLIENT_ID=your_whoop_client_id_here
 WHOOP_CLIENT_SECRET=your_whoop_client_secret_here
 WHOOP_REDIRECT_URI=http://localhost:3001/auth/whoop/callback
+
+# Demo App Configuration
 PORT=3001
 NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
@@ -147,8 +149,7 @@ demo-app/
 │   ├── src/
 │   │   └── index.ts        # Main server file
 │   ├── package.json
-│   ├── tsconfig.json
-│   └── env.example         # Environment template
+│   └── tsconfig.json
 ├── frontend/               # React frontend
 │   ├── src/
 │   │   ├── components/
